@@ -1,0 +1,214 @@
+---
+title: "PSY6422_Data_Management_&_Visualization"
+author: "Monika Sobieraj"
+date: "24.05.2021"
+output: 
+  html_document:  default
+---
+***
+ ![](pokemon_vector.svg) 
+
+***
+
+# Gotta Plot 'Em All!
+
+
+## Research Question
+
+This visualization attempts to find our how Pokemon's strength changed throughout generations (1-6) and if not-legendary Pokemon can defeat legendary, and what are they?
+
+## Pokemon Information
+
+> generations:
+
+**I Generation** - (1996-1999) New Pokemon - 151
+
+**II Generation** - (1999-2001) New Pokemon - 100
+
+**III Generation** - (2002-2005) New Pokemon - 135
+
+**IV Generation** - (2006-2010) New Pokemon - 107
+
+**V Generation** - (2010-2013) New Pokemon - 156
+
+**VI Generation** - (2013-2016) New Pokemon - 72
+
+> legendary:
+
+Legendary Pokemon are incredibly rare and often very powerful Pokemon, generally featured prominently in the legends and myths of the Pokemon world.
+
+*information source:* https://bulbapedia.bulbagarden.net/wiki/Legendary_Pok%C3%A9mon *and* https://bulbapedia.bulbagarden.net/wiki/Generation .
+
+## Data Origins
+
+The data consists of 721 Pokemon and specific for each of them attributes such as HP, Attack, Type.1 etc.
+
+Pokemon data that was used for this project and can be found at: [pokemon data](https://www.kaggle.com/abcsds/pokemon)
+
+```{r include=FALSE}
+
+if(!require("tidyverse"))install.packages("tidyverse")
+if(!require("dplyr"))install.packages("dplyr")
+if(!require("tidyr"))install.packages("tidyr") 
+if(!require("ggplot2"))install.packages("ggplot2")
+if(!require("tibble"))install.packages("tibble")
+if(!require("plotly"))install.packages("plotly") 
+if(!require("wesanderson"))install.packages("wesanderson") 
+if(!require("gganimate"))install.packages("gganimate") 
+if(!require("htmlwidgets"))install.packages("htmlwidgets") 
+
+library(tidyverse)
+library(plyr)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(tibble)
+library(plotly)
+library(wesanderson)
+library(gganimate)
+library(htmlwidgets)
+```
+
+```{r}
+data <- read.csv("data/pokemon_data.csv") #load data
+
+#there are 13 variables which are:
+names(data)
+```
+## Data Preparation
+
+```{r}
+#tidying and removing all except variables we need
+df <- data %>% tibble::as_tibble() %>% 
+   distinct(X., .keep_all = TRUE) %>% 
+  select(Name, Type.1, Total, Generation, Legendary) %>%
+   dplyr::rename(type = Type.1,
+         name = Name,
+         total = Total,
+         generation = Generation,
+         legendary = Legendary) %>%
+  arrange(type) %>%
+  print() 
+
+#tidying, changing type
+df$legendary[df$legendary=="True"] <- "Legendary" 
+df$legendary[df$legendary=="False"] <- "Not Legendary"
+
+head(df,10)
+```
+## Visualisation 1: Rainbow Pokemon - All
+
+
+```{r}
+g1 <- df %>%
+  mutate(text=paste("Name: ",(df$name), "\nType: ",(df$type), "\nTotal: ", (df$total), sep="")) %>% 
+  ggplot(df,mapping = aes(x = total, y=type, col=type, text=text)) +
+  geom_point(position = "jitter")+
+  labs( x="Total strength",
+        y= NULL,
+        title="Types of Pokemon")+
+  theme_minimal()+ 
+  theme(axis.text.y=element_blank(),
+        plot.title = element_text(size=20))+ 
+  guides(col=guide_legend("Types of Pokemon"))
+
+p1 <- ggplotly(g1, tooltip="text") 
+p1
+
+#save output
+htmlwidgets::saveWidget(p1, file="graphs/rainbow_pokemon.html")
+```
+
+
+
+### Visualisation 2: Legendary Pokemon
+```{r}
+names(wes_palettes)
+
+g2 <- df %>%
+mutate(text=paste("Name: ",(df$name), "\nType: ",(df$type), "\nTotal: ", 
+                  (df$total), "\nGen: ", (df$generation), "\n", 
+                  (df$legendary),sep="")) %>%
+ggplot(df,mapping = aes(x = generation, y=total, col=legendary, text=text)) +
+  geom_point(position = "jitter")+
+  labs( x=NULL,
+        y= "Total strength",
+        title="Legendary Pokemon")+
+  theme_minimal()+
+  theme(axis.text.x=element_blank(),
+        axis.title.x = element_blank(),
+        plot.title = element_text(size=20),
+        panel.grid.major.x = element_blank())+
+  guides(col=guide_legend("Types of Pokemon"))+
+  scale_colour_manual(values=wes_palette("Moonrise3"))
+
+p2 <- ggplotly(g2, tooltip="text") 
+p2
+
+#save output
+htmlwidgets::saveWidget(p2, file="graphs/legendary_pokemon.html")
+```
+### Visualisation 3 - Interactive Pokemon Types
+```{r}
+g3 <- df %>%
+  mutate(text=paste("Name: ",(df$name), "\nType: ",(df$type), "\nTotal: ", 
+                    (df$total), "\nGen: ", (df$generation), "\n", 
+                    (df$legendary),sep="")) %>%
+  ggplot(df,mapping = aes(x = generation, y=total, col=type, text=text)) +
+  geom_point(position = "jitter")+
+  labs( x=NULL,
+        y= "Total strength",
+        title="All Pokemon")+
+  theme_minimal()+
+  theme(axis.text.x=element_blank(),
+          plot.title = element_text(size=20),
+          panel.grid.major.y = element_line("#e6f2ff"),
+          panel.grid.major.x = element_blank(), 
+          axis.line = element_line(colour = "#003166"))+
+  guides(col=guide_legend("Types of Pokemon"))+
+  scale_color_manual(values = c("Bug"="tan4","Dark"="black","Dragon"="chartreuse4","Electric"="darkgoldenrod1","Fairy"="hotpink","Fighting"="darksalmon","Fire"="firebrick1","Flying"="lightskyblue","Ghost"="darkblue","Grass"="yellowgreen", "Ground"="peru","Ice"="cadetblue1","Normal"="pink","Poison"="maroon","Psychic"="darkviolet","Rock"="wheat3","Steel"="gray","Water"="steelblue1"))
+
+p3 <- ggplotly(g3, tooltip="text") 
+p3
+
+#save output
+htmlwidgets::saveWidget(p3, file="graphs/all_types_interactive.html")
+```
+
+
+
+### Visualisation 4: Animated Pokmon All
+```{r}
+g4 <- ggplot(df,mapping = aes(x = generation, y=total, col=type)) +
+  geom_point(position = "jitter", size=2)+
+  labs(title="Now showing {closest_state} Pokemon",
+       subtitle = 'Frame {frame} of {nframes}',
+       x=NULL,
+       y= "Total strength")+
+  theme_minimal()+
+  theme(axis.text.x=element_blank(),
+        axis.title.y = element_text(size=15),
+        plot.title = element_text(size=20),
+        panel.grid.major.y = element_line("#e6f2ff"),
+        axis.line = element_line(colour = "#003166"),
+        legend.position = "none")+ #removes legend
+  transition_states(type,
+                    transition_length = 20,
+                    state_length = 10,
+                    wrap = FALSE)+
+  enter_fade()+ 
+  exit_fade()+
+  scale_color_manual(values = c("Bug"="tan4","Dark"="black","Dragon"="chartreuse4","Electric"="darkgoldenrod1","Fairy"="hotpink","Fighting"="darksalmon","Fire"="firebrick1","Flying"="lightskyblue","Ghost"="darkblue","Grass"="yellowgreen", "Ground"="peru","Ice"="cadetblue1","Normal"="pink","Poison"="maroon","Psychic"="darkviolet","Rock"="wheat3","Steel"="gray","Water"="steelblue1"))
+
+animate(g4 + ease_aes(), width=600,height=600) 
+
+#save output
+anim_save(file="graphs/all_types_animated.gif") 
+```
+## Summary Discussion
+
+Caveat #1: Type.2 of Popkemon were not look at, which might be interesting to do so in the future.
+
+Caveat #2:  2 new generations (VII[2016-2019] and VIII [2019-2022]) were not included in the data and there are 177 new Pokemon.
+
+Caveat #3:  Comparison of each attributes of Total Score such as HP and Attack might be worth looking at
